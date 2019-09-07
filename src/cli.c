@@ -215,7 +215,9 @@ int add(int argc, char* argv[])
     static const int FL_FULLSCREEN = 1<<0;
     static const int FL_NOFOCUS = 1<<1;
     static const int FL_PANORAMIC = 1<<2;
+    static const int FL_MONITOR = 1<<3;
 
+    int m_idx = 0;
     int i;
     wnd_t wnd = 0;
     int flags = 0;
@@ -234,6 +236,14 @@ int add(int argc, char* argv[])
             flags |= FL_PANORAMIC;
         }
 
+        if (!strcmp(argv[i], "-m") || !strcmp(argv[i], "--monitor")) {
+            flags |= FL_MONITOR;
+            
+            if (i >= argc - 1) return 1;
+
+            m_idx = atoi(argv[++i]);
+        }
+
         if (!strcmp(argv[i], "--no-focus")) {
             flags |= FL_NOFOCUS;
         }
@@ -248,6 +258,10 @@ int add(int argc, char* argv[])
     }
 
     if ((flags & FL_PANORAMIC) && wp_panoramic(wnd)) {
+        return 1;
+    }
+
+    if ((flags & FL_MONITOR) && wp_fullscreen_by_index(wnd, m_idx)) {
         return 1;
     }
 

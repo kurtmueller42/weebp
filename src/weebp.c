@@ -311,6 +311,9 @@ WEEBAPI int wp_visible(wnd_t wnd);
 /* make wnd fill the monitor it's on */
 WEEBAPI int wp_fullscreen(wnd_t wnd);
 
+/* like fullscreen but for a specified monitor. numbering may vary */
+WEEBAPI int wp_fullscreen_by_index(wnd_t wnd, int i);
+
 /* make the wnd fill all monitors (entire desktop window) */
 WEEBAPI int wp_panoramic(wnd_t wnd);
 
@@ -830,6 +833,52 @@ int wp_fullscreen(wnd_t wnd)
         wp_err("MonitorFromWindow failed, GLE=%08X", GetLastError());
         return 1;
     }
+
+    mi.cbSize = sizeof(mi);
+
+    if (!GetMonitorInfoA(mon, &mi)) {
+        wp_err("GetMonitorInfoA failed, GLE=%08X", GetLastError());
+        return 1;
+    }
+
+    MapWindowPoints(0, wp_id(), (LPPOINT)&mi.rcMonitor, 2);
+    return wp_move(wnd, mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right,
+        mi.rcMonitor.bottom);
+}
+
+struct sEnumInfo
+{
+    int iIndex;
+    HMONITOR hMonitor;
+};
+
+BOOL CALLBACK GetMonitorByIndex(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData)
+{
+    struct sEnumInfo *info = (struct sEnumInfo*) dwData;
+    if (--info->iIndex < 0)
+    {
+        info->hMonitor = hMonitor;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+WEEBAPI
+int wp_fullscreen_by_index(wnd_t wnd, int i)
+{
+    struct sEnumInfo info;
+    info.iIndex = i;
+    info.hMonitor = NULL;
+
+    EnumDisplayMonitors(NULL, NULL, GetMonitorByIndex, (LPARAM)&info);
+    if (info.hMonitor == NULL)
+    {
+        wp_err("GetMonitorByIndex failed, GLE=%08X", GetLastError());
+        return 1;
+    }
+
+    HMONITOR mon = info.hMonitor;
+    MONITORINFO mi;
 
     mi.cbSize = sizeof(mi);
 
